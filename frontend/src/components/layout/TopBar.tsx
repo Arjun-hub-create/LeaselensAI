@@ -1,7 +1,13 @@
-import { Bell, Moon, Search } from 'lucide-react'
+import { Bell, Menu, Moon, Search } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import type { Ref } from 'react'
 
-export function TopBar() {
+type TopBarProps = {
+  onMenuClick: () => void
+  menuButtonRef?: Ref<HTMLButtonElement>
+}
+
+export function TopBar({ onMenuClick, menuButtonRef }: TopBarProps) {
   const searchRef = useRef<HTMLInputElement>(null)
 
   // Ctrl+K (or Cmd+K) focuses the search box
@@ -17,19 +23,31 @@ export function TopBar() {
   }, [])
 
   return (
-    <header className="flex items-center justify-between gap-4 px-8 py-5">
-      <div className="relative w-full max-w-xl">
-        <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#5385F7]" />
-        <input
-          ref={searchRef}
-          type="search"
-          aria-label="Search properties and documents"
-          placeholder="Search properties, documents...  (Ctrl + K)"
-          className="h-12 w-full rounded-2xl border border-border bg-secondary pl-12 pr-4 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        />
+    <header className="flex items-center justify-between gap-3 px-4 py-4 lg:px-8 lg:py-5">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Open navigation menu"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-foreground lg:hidden"
+        >
+          <Menu className="size-5" />
+        </button>
+
+        <div className="relative w-full max-w-xl">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#5385F7]" />
+          <input
+            ref={searchRef}
+            type="search"
+            aria-label="Search properties and documents"
+            placeholder="Search properties, documents...  (Ctrl + K)"
+            className="h-12 w-full rounded-2xl border border-border bg-secondary pl-12 pr-4 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <button
           type="button"
           aria-label="Notifications"

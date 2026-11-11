@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { ArrowUp, Clock } from 'lucide-react'
+import { ArrowUp, Clock, Info } from 'lucide-react'
 import { Area, AreaChart, ResponsiveContainer } from 'recharts'
 
 import { GlassCard } from '@/components/GlassCard'
@@ -9,16 +9,21 @@ type KpiCardProps = {
   label: string
   value: string
   trend: string
-  trendKind: 'up' | 'warning'
+  trendKind: 'up' | 'warning' | 'neutral'
   icon: LucideIcon
   color: string
   spark: number[]
 }
 
+const trendStyles = {
+  up: { icon: ArrowUp, color: '#0DBD9E' },
+  warning: { icon: Clock, color: '#F97D0B' },
+  neutral: { icon: Info, color: '#8991B7' },
+} as const
+
 export function KpiCard({ id, label, value, trend, trendKind, icon: Icon, color, spark }: KpiCardProps) {
   const data = spark.map((v, i) => ({ i, v }))
-  const TrendIcon = trendKind === 'up' ? ArrowUp : Clock
-  const trendColor = trendKind === 'up' ? '#0DBD9E' : '#F97D0B'
+  const { icon: TrendIcon, color: trendColor } = trendStyles[trendKind]
 
   return (
     <GlassCard className="p-5">
@@ -33,7 +38,7 @@ export function KpiCard({ id, label, value, trend, trendKind, icon: Icon, color,
           <p className="truncate text-sm text-muted-foreground">{label}</p>
           <p className="mt-1 text-3xl font-semibold leading-none">{value}</p>
           <p className="mt-3 flex items-center gap-1 text-sm" style={{ color: trendColor }}>
-            <TrendIcon className="size-4" />
+            <TrendIcon className="size-4 shrink-0" />
             {trend}
           </p>
         </div>

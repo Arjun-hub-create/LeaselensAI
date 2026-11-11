@@ -7,32 +7,53 @@ import {
   MessageCircle,
 } from 'lucide-react'
 
+import { demoDocuments } from '@/features/documents/demoDocuments'
+import { demoProperties } from '@/features/properties/demoProperties'
+
+// ---- Numbers computed from the same demo lists the other pages use ----
+
+const today = new Date()
+const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+
+function daysUntil(iso: string) {
+  return Math.round((new Date(`${iso}T00:00:00Z`).getTime() - todayUtc) / 86_400_000)
+}
+
+const propertiesByStatus = (status: string) => demoProperties.filter((p) => p.status === status).length
+const documentsByStatus = (status: string) => demoDocuments.filter((d) => d.status === status).length
+
+const expiriesSoon = demoProperties.filter((p) => {
+  if (!p.nextExpiry) return false
+  const days = daysUntil(p.nextExpiry)
+  return days >= 0 && days <= 60
+}).length
+
 export const demoKpis = [
   {
     id: 'kpi-properties',
     label: 'Total Properties',
-    value: '24',
-    trend: '+2 this month',
-    trendKind: 'up' as const,
+    value: String(demoProperties.length),
+    trend: `${propertiesByStatus('active')} active`,
+    trendKind: 'neutral' as const,
     icon: Building2,
     color: '#0866F8',
-    spark: [10, 12, 11, 14, 13, 17, 20, 24],
+    spark: [4, 5, 5, 6, 7, 8, 9, 10],
   },
   {
     id: 'kpi-documents',
-    label: 'Documents Processed',
-    value: '342',
-    trend: '+18%',
-    trendKind: 'up' as const,
+    label: 'Documents',
+    value: String(demoDocuments.length),
+    trend: `${documentsByStatus('approved')} approved · ${documentsByStatus('needs_review')} need review`,
+    trendKind: 'neutral' as const,
     icon: FileText,
     color: '#A948F6',
-    spark: [40, 52, 48, 70, 66, 90, 110, 130],
+    spark: [1, 2, 2, 4, 5, 6, 8, 10],
   },
   {
-    id: 'kpi-renewals',
-    label: 'Upcoming Renewals',
-    value: '3',
-    trend: 'In 30 days',
+    id: 'kpi-expiries',
+    label: 'Upcoming Expiries',
+    value: String(expiriesSoon),
+    trend: 'In the next 60 days',
     trendKind: 'warning' as const,
     icon: CalendarClock,
     color: '#0DBD9E',
@@ -42,13 +63,21 @@ export const demoKpis = [
     id: 'kpi-revenue',
     label: 'Total Revenue',
     value: '₹4.8L',
-    trend: '+12%',
-    trendKind: 'up' as const,
+    trend: 'Sample figure (demo)',
+    trendKind: 'neutral' as const,
     icon: IndianRupee,
     color: '#0DBD9E',
     spark: [2.2, 2.8, 2.9, 3.4, 3.9, 4.2, 4.5, 4.8],
   },
 ]
+
+export const demoPropertyStatus = [
+  { label: 'Active', count: propertiesByStatus('active'), fill: '#0866F8' },
+  { label: 'Inactive', count: propertiesByStatus('inactive'), fill: '#0DBD9E' },
+  { label: 'Archived', count: propertiesByStatus('archived'), fill: '#F97D0B' },
+]
+
+// ---- Everything below is unchanged ----
 
 // Last 6 calendar months, ending with the current month.
 const revenueValues = [1.8, 2.8, 3.0, 3.7, 4.1, 4.8]
@@ -99,12 +128,6 @@ export const demoChat = {
   ],
   source: 'Source: Lease Agreement, page 3 (demo)',
 }
-
-export const demoPropertyStatus = [
-  { label: 'Active', count: 18, fill: '#0866F8' },
-  { label: 'Inactive', count: 4, fill: '#0DBD9E' },
-  { label: 'Archived', count: 2, fill: '#F97D0B' },
-]
 
 export const demoTasks = [
   {
