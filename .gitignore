@@ -1,0 +1,27 @@
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+
+# Runtime data: uploads, local files
+storage/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Database volumes and model files
+pgdata/
+postgres-data/
+*.gguf
+
+# OS junk
+Thumbs.db
+.DS_Store
