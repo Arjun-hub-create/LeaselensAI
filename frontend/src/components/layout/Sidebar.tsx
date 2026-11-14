@@ -1,7 +1,10 @@
-import { Building2, ChevronDown, Zap } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Building2, LogOut, Zap } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 import { navItems } from '@/app/navigation'
+import { useMe } from '@/features/auth/auth'
+import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type SidebarProps = {
@@ -9,7 +12,39 @@ type SidebarProps = {
   onNavigate?: () => void
 }
 
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  property_manager: 'Property Manager',
+  reviewer: 'Reviewer',
+  viewer: 'Viewer',
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('')
+}
+
 export function Sidebar({ className, onNavigate }: SidebarProps) {
+  const me = useMe()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+
+  const logout = useMutation({
+    mutationFn: () => api<void>('/auth/logout', { method: 'POST' }),
+    onSettled: () => {
+      // Whether or not the server call worked, forget everything locally and go to login.
+      queryClient.clear()
+      navigate('/login', { replace: true })
+    },
+  })
+
+  const user = me.data?.user
+  const role = me.data?.role
+
   return (
     <aside
       className={cn(
@@ -56,16 +91,28 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         <p className="mt-2 text-sm font-medium">Smarter Property Management with AI</p>
       </div>
 
-      {/* Profile */}
-      <div className="mx-4 mb-4 flex shrink-0 items-center gap-3 rounded-2xl border border-sidebar-border p-3">
-        <div className="flex size-10 items-center justify-center rounded-full bg-[#5385F7] text-sm font-semibold text-white">
-          AM
+      {/* Signed-in user */}
+      <div className="mx-4 mb-4 shrink-0 rounded-2xl border border-sidebar-border p-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-full bg-[#5385F7] text-sm font-semibold text-white">
+            {user ? initials(user.display_name) : '?'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{user?.display_name ?? 'Signed in'}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {role ? (roleLabels[role] ?? role) : ''}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">Arjun M</p>
-          <p className="truncate text-xs text-muted-foreground">Property Manager</p>
-        </div>
-        <ChevronDown className="size-4 text-muted-foreground" />
+        <button
+          type="button"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+        >
+          <LogOut className="size-4" />
+          Sign out
+        </button>
       </div>
     </aside>
   )

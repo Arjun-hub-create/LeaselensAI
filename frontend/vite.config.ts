@@ -11,4 +11,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    // The browser calls /api/... on this server, and Vite forwards it to FastAPI.
+    // One origin means no CORS setup and plain cookies in development.
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8000' },
+    },
+  },
 })

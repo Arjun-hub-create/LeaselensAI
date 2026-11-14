@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PagePlaceholder } from '@/components/PagePlaceholder'
 import { ApprovalsPage } from '@/features/approvals/ApprovalsPage'
+import { LoginPage } from '@/features/auth/LoginPage'
+import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentReviewPage } from '@/features/documents/DocumentReviewPage'
 import { DocumentsPage } from '@/features/documents/DocumentsPage'
@@ -46,16 +48,23 @@ function pageFor(path: string, label: string, description: string) {
 }
 
 export const router = createBrowserRouter([
+  { path: '/login', element: <LoginPage /> },
   {
-    path: '/',
-    element: <AppLayout />,
+    // Everything inside this group requires a signed-in user.
+    element: <RequireAuth />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
-      { path: 'documents/:documentId/review', element: <DocumentReviewPage /> },
-      ...navItems.map((item) => ({
-        path: item.path,
-        element: pageFor(item.path, item.label, item.description),
-      })),
+      {
+        path: '/',
+        element: <AppLayout />,
+        children: [
+          { index: true, element: <Navigate to="/dashboard" replace /> },
+          { path: 'documents/:documentId/review', element: <DocumentReviewPage /> },
+          ...navItems.map((item) => ({
+            path: item.path,
+            element: pageFor(item.path, item.label, item.description),
+          })),
+        ],
+      },
     ],
   },
 ])

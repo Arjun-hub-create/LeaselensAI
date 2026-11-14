@@ -1,48 +1,55 @@
-import { CircleCheck, FileUp, TriangleAlert } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { CircleCheck, FileUp, LoaderCircle, TriangleAlert } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 
 import { GlassCard } from '@/components/GlassCard'
 import { Button } from '@/components/ui/button'
+import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-const MAX_BYTES = 25 * 1024 * 1024 // 25 MB, the limit in our security doc
+import { formatFileSize, uploadDocument } from './documentsApi'
 
-type Result =
-  | { kind: 'ok'; name: string; size: number }
-  | { kind: 'error'; message: string }
-  | null
+const MAX_BYTES = 25 * 1024 * 1024 // the same limit the server enforces
 
-function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
-
-function checkFile(file: File): Result {
-  if (!file.name.toLowerCase().endsWith('.pdf')) {
-    return { kind: 'error', message: 'Only PDF files are supported.' }
-  }
-  if (file.size === 0) {
-    return { kind: 'error', message: 'This file is empty.' }
-  }
+// These checks only save a round trip. The server repeats every one of them and decides.
+function checkFile(file: File): string | null {
+  if (!file.name.toLowerCase().endsWith('.pdf')) return 'Only PDF files are supported.'
+  if (file.size === 0) return 'This file is empty.'
   if (file.size > MAX_BYTES) {
-    return { kind: 'error', message: `This file is ${formatSize(file.size)}. The limit is 25 MB.` }
+    return `This file is ${formatFileSize(file.size)}. The limit is 25 MB.`
   }
-  return { kind: 'ok', name: file.name, size: file.size }
+  return null
 }
 
-export function UploadDropzone() {
+export function UploadDropzone({ canUpload }: { canUpload: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
   const [dragging, setDragging] = useState(false)
-  const [result, setResult] = useState<Result>(null)
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  const upload = useMutation({
+    mutationFn: uploadDocument,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
 
   function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return
+    if (!canUpload || !files || files.length === 0) return
+    upload.reset()
     if (files.length > 1) {
-      setResult({ kind: 'error', message: 'Please choose one file at a time.' })
+      setLocalError('Please choose one file at a time.')
       return
     }
-    setResult(checkFile(files[0]))
+    const file = files[0]
+    const problem = checkFile(file)
+    if (problem) {
+      setLocalError(problem)
+      return
+    }
+    setLocalError(null)
+    upload.mutate(file)
   }
 
   function onDrop(event: DragEvent<HTMLDivElement>) {
@@ -51,11 +58,19 @@ export function UploadDropzone() {
     handleFiles(event.dataTransfer.files)
   }
 
+  const serverError = upload.isError
+    ? upload.error instanceof ApiError
+      ? upload.error.message
+      : 'Could not reach the server. Check that the backend is running.'
+    : null
+  const errorMessage = localError ?? serverError
+  const fileName = upload.variables?.name
+
   return (
     <GlassCard
       className={cn(
         'border-dashed p-6 text-center transition-colors',
-        dragging && 'border-[#A948F6] bg-[#5537D3]/10',
+        dragging && canUpload && 'border-[#A948F6] bg-[#5537D3]/10',
       )}
       onDragOver={(e: DragEvent<HTMLDivElement>) => {
         e.preventDefault()
@@ -84,28 +99,44 @@ export function UploadDropzone() {
           e.target.value = ''
         }}
       />
-      <Button className="mt-4" onClick={() => inputRef.current?.click()}>
+      <Button
+        className="mt-4"
+        onClick={() => inputRef.current?.click()}
+        disabled={!canUpload || upload.isPending}
+      >
         Choose PDF
       </Button>
 
+      {!canUpload ? (
+        <p className="mt-4 text-sm text-muted-foreground">
+          Your role can view documents but not upload them. Admins and property managers can upload.
+        </p>
+      ) : null}
+
       <div aria-live="polite" className="mt-4 min-h-6 text-sm">
-        {result?.kind === 'ok' && (
+        {upload.isPending ? (
+          <p className="flex items-center justify-center gap-2 text-muted-foreground">
+            <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
+            Uploading {fileName}...
+          </p>
+        ) : null}
+        {upload.isSuccess && !errorMessage ? (
           <p className="flex items-center justify-center gap-2 text-[#3FE0C2]">
             <CircleCheck className="size-4" />
-            {result.name} ({formatSize(result.size)}) looks valid.
+            {fileName} was uploaded and queued.
           </p>
-        )}
-        {result?.kind === 'error' && (
+        ) : null}
+        {errorMessage ? (
           <p className="flex items-center justify-center gap-2 text-[#FF8A8A]">
             <TriangleAlert className="size-4" />
-            {result.message}
+            {errorMessage}
           </p>
-        )}
+        ) : null}
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        Demo only: nothing is uploaded or saved yet. Saving and processing arrive with the backend, which will
-        also re-check every file.
+        Files are stored on this computer. Reading and extracting them comes in the next step, so
+        documents stay &quot;Queued&quot; for now.
       </p>
     </GlassCard>
   )
