@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     storage_root: str = str(_PROJECT_ROOT / "storage")
     max_upload_bytes: int = 26_214_400  # 25 MB, the limit in our security doc
 
+    # Background worker. These are starting points to tune after measuring, not proven values.
+    max_pdf_pages: int = 500
+    job_stale_after_seconds: int = 900  # a "running" job older than this is assumed to have crashed
+    job_poll_seconds: float = 3.0
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
